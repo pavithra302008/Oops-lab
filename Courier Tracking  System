@@ -1,0 +1,125 @@
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+public class CourierTrackingSystem {
+ public static void main(String[] args) {
+ CourierService service = new CourierService();
+ System.out.println("===== COURIER TRACKING SYSTEM =====\n");
+ System.out.println("--- Parcel Registration ---");
+ try {
+ service.registerParcel("TRK1001", "Arun", "Divya");
+ service.registerParcel("TRK1002", "Kavin", "Meena");
+ service.registerParcel("TRK1003", "Priya", "Ravi");
+ service.registerParcel("TRK1001", "Sam", "John"); // duplicate
+ } catch (DuplicateParcelException e) {
+ System.out.println("Error : " + e.getMessage());
+ }
+ System.out.println("\n--- Status Update ---");
+ try {
+ service.updateStatus("TRK1001", "Picked Up");
+ service.updateStatus("TRK1001", "In Transit");
+ service.updateStatus("TRK1002", "Picked Up");
+ service.updateStatus("TRK1003", "Lost"); // invalid status
+ } catch (ParcelNotFoundException | InvalidStatusException e) {
+ System.out.println("Error : " + e.getMessage()); 2
+ }
+ System.out.println("\n--- Track Parcel ---");
+ try {
+ Parcel p = service.trackParcel("TRK1001");
+ p.display();
+ System.out.println("History : " + p.getHistory());
+ System.out.println();
+ service.trackParcel("TRK9999").display(); // not found
+ } catch (ParcelNotFoundException e) {
+ System.out.println("Error : " + e.getMessage());
+ }
+ System.out.println("\n--- All Parcels ---");
+ System.out.printf("%-10s %-10s %-10s %s%n", "Tracking", "Sender", "Receiver", "Status");
+ service.displayAll();
+ }
+}
+// Custom exception: parcel not found
+class ParcelNotFoundException extends Exception {
+ public ParcelNotFoundException(String message) {
+ super(message);
+ }
+}
+// Custom exception: duplicate tracking number
+class DuplicateParcelException extends Exception {
+ public DuplicateParcelException(String message) {
+ super(message);
+ }
+}
+// Custom exception: invalid status
+class InvalidStatusException extends Exception {
+ public InvalidStatusException(String message) {
+ super(message);
+ }
+}
+// Class with encapsulated (private) data members
+class Parcel {
+ private String trackingNumber;
+ private String sender;
+ private String receiver;
+ private String status;
+ private List<String> history = new ArrayList<>();
+ public Parcel(String trackingNumber, String sender, String receiver) {
+ this.trackingNumber = trackingNumber;
+ this.sender = sender;
+ this.receiver = receiver;
+ this.status = "Registered";
+ history.add("Registered");
+ }
+ public String getTrackingNumber() { return trackingNumber; }
+ public String getSender() { return sender; }
+ public String getReceiver() { return receiver; }
+ public String getStatus() { return status; }
+ public List<String> getHistory() { return history; }
+ public void setStatus(String status) {
+ this.status = status;
+ history.add(status);
+ }
+ public void display() {
+ System.out.println("Tracking Number : " + trackingNumber);
+ System.out.println("Sender : " + sender);
+ System.out.println("Receiver : " + receiver);
+ System.out.println("Current Status : " + status);
+ }
+} 3
+// Service class using Collections (LinkedHashMap)
+class CourierService {
+ private Map<String, Parcel> parcels = new LinkedHashMap<>();
+ private static final List<String> VALID_STATUS = List.of(
+ "Registered", "Picked Up", "In Transit", "Out for Delivery", "Delivered");
+ public void registerParcel(String id, String sender, String receiver)
+ throws DuplicateParcelException {
+ if (parcels.containsKey(id)) {
+ throw new DuplicateParcelException("Tracking number " + id + " already exists!");
+ }
+ parcels.put(id, new Parcel(id, sender, receiver));
+ System.out.println("Parcel registered successfully : " + id);
+ }
+ public Parcel trackParcel(String id) throws ParcelNotFoundException {
+ Parcel p = parcels.get(id);
+ if (p == null) {
+ throw new ParcelNotFoundException("No parcel found with tracking number " + id);
+ }
+ return p;
+ }
+ public void updateStatus(String id, String newStatus)
+ throws ParcelNotFoundException, InvalidStatusException {
+ Parcel p = trackParcel(id);
+ if (!VALID_STATUS.contains(newStatus)) {
+ throw new InvalidStatusException("Invalid status : " + newStatus);
+ }
+ p.setStatus(newStatus);
+ System.out.println("Status updated for " + id + " -> " + newStatus);
+ }
+ public void displayAll() {
+ for (Parcel p : parcels.values()) {
+ System.out.printf("%-10s %-10s %-10s %s%n",
+ p.getTrackingNumber(), p.getSender(), p.getReceiver(), p.getStatus());
+ }
+ }
+}
